@@ -1,0 +1,58 @@
+version: "3.1"
+services:
+
+    memcached:
+      image: memcached:alpine
+      container_name: recipes-memcached
+
+    redis:
+      image: redis:alpine
+      container_name: recipes-redis
+
+    db:
+      image: mysql:5.7
+      container_name: recipes-bd
+      working_dir: /recipes
+      volumes:
+        - ./docker/data/mysql:/var/lib/mysql
+      environment:
+        - MYSQL_ROOT_PASSWORD=root
+        - MYSQL_DATABASE=recipes
+        - MYSQL_USER=root
+        - MYSQL_PASSWORD=root
+      ports:
+        - "8082:3306"
+
+    elasticsearch:
+      image: elasticsearch:5.4-alpine
+      container_name: recipes-elasticsearch
+
+    webserver:
+      image: nginx:alpine
+      container_name: recipes-webserver
+      working_dir: /recipes
+      volumes:
+          - .:/recipes
+      ports:
+       - "8080:80"
+      links:
+       - php-fpm
+
+    php-fpm:
+      build: docker/phpdocker/php-fpm
+      container_name: recipes-php-fpm
+      working_dir: /recipes
+      volumes:
+        - ./:/var/www/recipes
+        - ~/.ssh:/home/wwwagent/.ssh
+      links:
+        - db
+        - elasticsearch
+        - redis
+
+    recipes:
+      image: abh1nav/dockerui
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+      links:
+        - webserver
